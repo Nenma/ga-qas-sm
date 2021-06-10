@@ -1,0 +1,3 @@
+# Genetic Algorithm based Question Answering System for Social Media
+
+Reference paper: [Genetic Algorithms for syntactic and data-driven Question Answering on the Web](https://www.researchgate.net/profile/Alejandro-Figueroa-15/publication/271911238_Genetic_Algorithms_for_syntactic_and_data-driven_Question_Answering_on_the_Web/links/54d6fb680cf2970e4e6fb60b/Genetic-Algorithms-for-syntactic-and-data-driven-Question-Answering-on-the-Web.pdf)
