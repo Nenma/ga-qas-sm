@@ -2,7 +2,7 @@
 Module containing a single function used to determine the Estimated Answer Type (EAT) for a given query.
 '''
 
-DATE = ['WHEN', 'WHAT YEAR', 'WHAT DAY']
+DATE = ['WHEN', 'WHAT YEAR', 'IN WHAT YEAR', 'WHAT DAY', 'IN WHAT DAY']
 LOCATION = ['WHERE',
             'WHAT CITY', 'IN WHAT CITY', 'IN WHICH CITY',
             'WHAT COUNTRY', 'IN WHAT COUNTRY', 'IN WHICH COUNTRY',
