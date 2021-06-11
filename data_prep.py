@@ -40,7 +40,7 @@ def get_sentence_set(snippets, stop_words):
     final_sentence_set = list()
     for sentence in sentence_set:
         counter = 0
-        for word in sentence.split(' '):
+        for word in sentence.split():
             if word not in stop_words:
                 counter += 1
         if counter > 2:
@@ -91,7 +91,7 @@ def get_unigrams(sentence_set, stop_words):
 
     words = list()
     for sentence in sentence_set:
-        for word in sentence.split(' '):
+        for word in sentence.split():
             words.append(word)
     
     unique_words = list(Counter(words).keys())

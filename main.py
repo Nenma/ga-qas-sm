@@ -56,6 +56,8 @@ if __name__ == '__main__':
     eat = qa.get_EAT(query)
     sents, answs = ae.use_qa_store(eat)
     pl, pr = ae.calc_syn_contribution(sents, answs)
+
+    # QUERY MUST BE CAPITALIZED AND SPLIT BEFORE BEING SENT TO GA
     
     snippets = read_snippets()
     sentence_set = dp.get_sentence_set(snippets, stop_words)
