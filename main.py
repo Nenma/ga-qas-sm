@@ -3,6 +3,7 @@ import json
 
 import query_analyzer as qa
 import data_prep as dp
+import answer_extraction as ae
 
 
 query = 'who invented the lightbulb'
@@ -49,14 +50,16 @@ def read_snippets():
 
 
 if __name__ == '__main__':
+    sents, answs = ae.use_qa_store('PERSON')
+    ae.calc_syn_contribution(sents, answs)
     # resp = get_raw_snippets()
-    snippets = read_snippets()
+    # snippets = read_snippets()
 
-    base = dp.get_baseline(snippets)
+    # base = dp.get_baseline(snippets)
     
-    eat = qa.get_EAT(query)
+    # eat = qa.get_EAT(query)
     # print(dp.normalize_query(query, eat))
 
-    sent_set = dp.get_sentence_set(snippets)
-    unigrams = dp.get_unigrams(sent_set)
+    # sent_set = dp.get_sentence_set(snippets)
+    # unigrams = dp.get_unigrams(sent_set)
     # print(unigrams)
