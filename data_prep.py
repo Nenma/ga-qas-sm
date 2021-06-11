@@ -4,24 +4,20 @@ Module containing functions used for query normalization and snippet preprocessi
 
 import re
 import math
-from nltk.corpus import stopwords
 from collections import Counter
 
 
-stop_words = set(stopwords.words('english'))
+def normalize_query(query):
+    '''
+    Transforms the query into a list of uppercase keywords.
+    Return the list.
+    '''
+
+    keywords = query.upper().split()
+    return keywords
 
 
-# def normalize_query(query, eat):
-#     '''
-#     Transforms the query into a tuple of EAT and a tuple of keywords.
-#     Return the transformed query.
-#     '''
-
-#     keywords = tuple([word for word in query.split(' ') if word.lower() not in stop_words])
-#     return (eat, keywords)
-
-
-def get_sentence_set(snippets):
+def get_sentence_set(snippets, stop_words):
     '''
     Normalizes the snippets and splits them into sentences according
     to standard punctuation, only keeping those with more than 2
@@ -30,7 +26,7 @@ def get_sentence_set(snippets):
     '''
 
     # split sentences according to standard punctuation
-    sentence_set = []
+    sentence_set = list()
     for snipp in snippets:
         sentences = re.split('[,.;:\-?|]', snipp)
         for sentence in sentences:
@@ -41,7 +37,7 @@ def get_sentence_set(snippets):
                     sentence_set.append(sentence)
 
     # only keep sentences with more than 2 non-stopwords
-    final_sentence_set = []
+    final_sentence_set = list()
     for sentence in sentence_set:
         counter = 0
         for word in sentence.split(' '):
@@ -53,14 +49,14 @@ def get_sentence_set(snippets):
     return final_sentence_set
 
 
-def get_baseline(snippets):
+def get_baseline(snippets, stop_words):
     '''
     Calculated the Term Frequency - Inverse Document Frequency for each unique
     snippet of the retrieved snippets. Each snippet is interpreted as one
     document, and all the snippets are seen as the collection of documents. 
     '''
 
-    words = []
+    words = list()
     for snipp in snippets:
         for sentence in re.split('[,.;:\-?|]', snipp):
             for word in sentence.split(' '):
@@ -69,7 +65,7 @@ def get_baseline(snippets):
     unique_words = list(Counter(words).keys())
     unique_words_freq = list(Counter(words).values())
 
-    word_freq = []
+    word_freq = list()
     max_freq = max(unique_words_freq)
     collection_size = len(snippets)
 
@@ -86,14 +82,14 @@ def get_baseline(snippets):
     return word_freq
 
 
-def get_unigrams(sentence_set):
+def get_unigrams(sentence_set, stop_words):
     '''
     Find the words that occur at least 2 times in the set of sentences
     and are not stopwords.
     Returns a list of tuples of words with their frequency.
     '''
 
-    words = []
+    words = list()
     for sentence in sentence_set:
         for word in sentence.split(' '):
             words.append(word)
@@ -101,7 +97,7 @@ def get_unigrams(sentence_set):
     unique_words = list(Counter(words).keys())
     unique_words_freq = list(Counter(words).values())
 
-    unigrams = []
+    unigrams = list()
     for i in range(len(unique_words)):
         if unique_words[i] != '' and unique_words[i].lower() not in stop_words and unique_words_freq[i] >= 2:
             unigrams.append((unique_words[i], unique_words_freq[i]))

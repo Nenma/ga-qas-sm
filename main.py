@@ -1,5 +1,6 @@
 import requests
 import json
+from nltk.corpus import stopwords
 
 import query_analyzer as qa
 import data_prep as dp
@@ -8,6 +9,7 @@ import answer_extraction as ae
 
 query = 'who invented the lightbulb'
 counter = 10  # number of snippets to be retrieved (max. 10)
+stop_words = set(stopwords.words('english'))
 
 
 def get_raw_snippets():
@@ -27,14 +29,14 @@ def get_raw_snippets():
                 'key': api_key}
     )
 
-    test = open('info/test.txt', 'w')
-    json_response = response.json()
-    for i in range(counter):
-        snipp = json_response['items'][i]['snippet']
-        if snipp:
-            snipp = snipp.strip('\n')
-            snipp = snipp.replace('\n', '')
-            test.write(snipp + '\n')
+    # test = open('info/test.txt', 'w')
+    # json_response = response.json()
+    # for i in range(counter):
+    #     snipp = json_response['items'][i]['snippet']
+    #     if snipp:
+    #         snipp = snipp.strip('\n')
+    #         snipp = snipp.replace('\n', '')
+    #         test.write(snipp + '\n')
 
     return response.json()
 
@@ -50,16 +52,12 @@ def read_snippets():
 
 
 if __name__ == '__main__':
-    sents, answs = ae.use_qa_store('PERSON')
-    ae.calc_syn_contribution(sents, answs)
     # resp = get_raw_snippets()
-    # snippets = read_snippets()
-
-    # base = dp.get_baseline(snippets)
+    eat = qa.get_EAT(query)
+    sents, answs = ae.use_qa_store(eat)
+    pl, pr = ae.calc_syn_contribution(sents, answs)
     
-    # eat = qa.get_EAT(query)
-    # print(dp.normalize_query(query, eat))
-
-    # sent_set = dp.get_sentence_set(snippets)
+    snippets = read_snippets()
+    sentence_set = dp.get_sentence_set(snippets, stop_words)
     # unigrams = dp.get_unigrams(sent_set)
     # print(unigrams)
