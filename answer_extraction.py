@@ -35,7 +35,7 @@ def calc_syn_contribution(sentences, answers):
     
     words = list()
     for sentence in sentences:
-        for word in sentence.split(' '):
+        for word in sentence.split():
             words.append(word)
 
     unique_words = list(Counter(words).keys())
@@ -77,6 +77,31 @@ def calc_syn_contribution(sentences, answers):
     return Pl, Pr
 
 
+def create_initial_pop(query, sentence_set, stop_words):
+    '''
+    Initializes the population with a number of chromosomes equal to the
+    size of the sentence set. A chromosome is a list [K, s, k1, k2] where
+    K is the initial fitness (0), s is the sentence index, and k1 and k2 
+    are the boundaries of the n-gram in the sentence.
+    Returns the list of chromosomes.
+    '''
+    pop = list()
+    for i, sentence in enumerate(sentence_set):
+        sentence = sentence.split()
+        # generate new k1 and k2 if the n-gram contains stopwords or words from the query
+        bad_candidate = True
+        while bad_candidate:
+            bad_candidate = False
+            k1 = random.randint(0, len(sentence) - 1)
+            k2 = random.randint(k1, len(sentence) - 1)
+            if any([word in sentence[k1:k2] for word in stop_words]) or any([word in sentence[k1:k2] for word in query]):
+                bad_candidate = True
+        
+        pop.append([0, i, k1, k2])
+
+    return pop
+
+
 def query_weight(word, query):
     '''
     Give more weight to words that are part of the query and 
@@ -113,40 +138,18 @@ def fitness(chromosome, query, sentence_set, Pl, Pr):
     # words before the answer candidate
     for i in range(1, k1):
         word = sentence[i]
-        part_sum += query_weight(word, query) * Pl[word][i - 1]
+        if word in Pl:
+            part_sum += query_weight(word, query) * Pl[word][i - 1]
     
     # words after the answer candidate:
     for i in range(k2 + 1, len(sentence)):
         word = sentence[i]
-        part_sum += query_weight(word, query) * Pr[word][i - k2 - 1]
+        if word in Pr:
+            part_sum += query_weight(word, query) * Pr[word][i - k2 - 1]
 
     chromosome[0] = part_sum
 
     return chromosome
-
-
-def create_initial_pop(query, sentence_set, stop_words):
-    '''
-    Initializes the population with a number of chromosomes equal to the
-    size of the sentence set. A chromosome is a list [K, s, k1, k2] where
-    K is the initial fitness (0), s is the sentence index, and k1 and k2 
-    are the boundaries of the n-gram in the sentence.
-    Returns the list of chromosomes.
-    '''
-    pop = list()
-    for i, sentence in enumerate(sentence_set):
-        # generate new k1 and k2 if the n-gram contains stopwords or words from the query
-        bad_candidate = True
-        while bad_candidate:
-            bad_candidate = False
-            k1 = random.randint(0, len(sentence))
-            k2 = random.randint(k1, len(sentence))
-            if any([word in sentence[k1:k2] for word in stop_words]) or any([word in sentence[k1:k2] for word in query]):
-                bad_candidate = True
-        
-        pop.append([0, i, k1, k2])
-
-    return pop
 
 
 # a chromosome is [K, s, k1, k2] where
@@ -154,7 +157,7 @@ def create_initial_pop(query, sentence_set, stop_words):
 # s - sentence index
 # k1 - left boundary
 # k2 - right boundary
-def crossover(pop, prob, query, sentence_set, Pl, Pr):
+def crossover(pop, pop_size, prob, query, sentence_set, Pl, Pr):
     '''
     Randomly select 2 chromosomes and create 2 children whose
     k1 and k2 boundaries are a mix of the 2 parents'. Do this
@@ -165,27 +168,29 @@ def crossover(pop, prob, query, sentence_set, Pl, Pr):
     for _ in range(len(pop)):
         chance = random.uniform(0, 1)
         if chance <= prob:
-            first_parent = random.randint(0, len(pop))
-            second_parent = random.randint(0, len(pop))
+            first_parent = random.randint(0, pop_size - 1)
+            second_parent = random.randint(0, pop_size - 1)
             while second_parent == first_parent:
-                second_parent = random.randint(0, len(pop))
+                second_parent = random.randint(0, pop_size - 1)
 
             first_parent = pop[first_parent]
             first_index = first_parent[1]
             first_k1 = first_parent[2]
             first_k2 = first_parent[3]
+            first_sentence = sentence_set[first_index].split()
 
             second_parent = pop[second_parent]
             second_index = second_parent[1]
             second_k1 = second_parent[2]
             second_k2 = second_parent[3]
+            second_sentence = sentence_set[second_index].split()
 
             b1 = min(first_k1, second_k1)
-            b2 = min(max(first_k2, second_k2), len(sentence_set(first_index)))
+            b2 = min(max(first_k2, second_k2), len(first_sentence))
             b3 = max(first_k1, second_k1)
             b4 = min(max(first_k2, second_k2), b3)
 
-            if b1 < b2 <= len(sentence_set(first_index)) - 1 and b3 < b4 <= len(sentence_set(second_index)) - 1:
+            if b1 <= b2 <= len(first_sentence) - 1 and b3 <= b4 <= len(second_sentence) - 1:
                 first_child = [0, first_index, b1, b2]
                 first_child[0] = fitness(first_child, query, sentence_set, Pl, Pr)
                 new_pop.append(first_child)
@@ -202,7 +207,7 @@ def crossover(pop, prob, query, sentence_set, Pl, Pr):
 # s - sentence index
 # k1 - left boundary
 # k2 - right boundary
-def mutate(pop, sentence_set, prob):
+def mutate(pop, pop_size, sentence_set, prob):
     '''
     Each chromosome has a change to randomly mutate. A mutation can either
     be: (1) a change of sentence index, (2) a change of k1 boundary or
@@ -215,10 +220,11 @@ def mutate(pop, sentence_set, prob):
         if chance <= prob:
             r = random.uniform(0, 1)
             if r < 0.33:  # change index of sentence
-                index = random.randint(0, len(pop))
-                if chromosome[2] >= sentence_set[index] or chromosome[3] >= sentence_set[index]:
+                index = random.randint(0, pop_size - 1)
+                sentence = sentence_set[index].split()
+                if chromosome[2] >= len(sentence) - 1 or chromosome[3] >= len(sentence) - 1:
                     diff = chromosome[3] - chromosome[2]
-                    chromosome[3] = len(sentence_set[index]) - 1
+                    chromosome[3] = len(sentence) - 1
                     chromosome[2] = chromosome[3] - diff
                 chromosome[1] = index
             elif 0.33 <= r <= 0.66:  # change k1 boundary
@@ -229,7 +235,7 @@ def mutate(pop, sentence_set, prob):
                     chromosome[2] += 1
             elif r > 0.66:  # change k2 boundary
                 rj = random.uniform(0, 1)
-                if rj <= 0.5 and chromosome[3] < len(sentence_set[chromosome[1]]) - 1:
+                if rj <= 0.5 and chromosome[3] < len(sentence_set[chromosome[1]].split()) - 1:
                     chromosome[3] += 1
                 elif rj > 0.5 and chromosome[3] - chromosome[2] > 0:
                     chromosome[3] -= 1
@@ -243,12 +249,14 @@ def evaluate_pop(pop, query, sentence_set, Pl, Pr):
     return [fitness(chromosome, query, sentence_set, Pl, Pr) for chromosome in pop]
 
 
-def choose_one(fitsum):
-    pos = random.uniform(0, fitsum[-1])
-    for i in range(len(fitsum)):
-        if pos <= fitsum[i]:
+def pick_one(collective_fitness):
+    maxi = sum(collective_fitness)
+    pick = random.uniform(0, maxi)
+    current = 0
+    for i in range(len(collective_fitness)):
+        current += collective_fitness[i]
+        if current > pick:
             return i
-    return 0
 
 
 def select_pop(pop, pop_size):
@@ -258,21 +266,23 @@ def select_pop(pop, pop_size):
     '''
     
     new_pop = list()
-    fitsum = list()
     collective_fitness = [chromosome[0] for chromosome in pop]
-
-    fitsum.append(collective_fitness[0])
-    for i in range(1, len(collective_fitness)):
-        fitsum.append(collective_fitness[i - 1] + collective_fitness[i])
 
     already_selected = list()
 
     for _ in range(pop_size):
-        candidate = choose_one(fitsum)
+        candidate = pick_one(collective_fitness)
         if candidate not in already_selected:
             new_pop.append(pop[candidate])
             already_selected.append(candidate)
-
+        else:
+            already_selected_flag = True
+            while already_selected_flag:
+                candidate = random.randint(0, len(pop) - 1)
+                if candidate not in already_selected:
+                    already_selected_flag = False
+                    new_pop.append(pop[candidate])
+                    already_selected.append(candidate)
     return new_pop
 
 
@@ -280,10 +290,12 @@ def ga(generations, query, sentence_set, stop_words, mutation_prob, crossover_pr
     pop = create_initial_pop(query, sentence_set, stop_words)
     pop_size = len(pop)
 
-    for _ in range(generations):
-        pop = crossover(pop, crossover_prob, query, sentence_set, Pl, Pr)
-        pop = mutate(pop, sentence_set, mutation_prob)
+    for i in range(generations):
+        # print('Training generation', i + 1, '...')
+        pop = crossover(pop, pop_size, crossover_prob, query, sentence_set, Pl, Pr)
+        pop = mutate(pop, pop_size, sentence_set, mutation_prob)
         pop = evaluate_pop(pop, query, sentence_set, Pl, Pr)
         pop = select_pop(pop, pop_size)
+        # print('Finished generation', i + 1)
 
     return max(pop)

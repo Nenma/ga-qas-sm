@@ -51,15 +51,33 @@ def read_snippets():
     return normalized_snippets
 
 
+def process_answer(ans, sentence_set):
+    sentence = sentence_set[ans[1]]
+    print(sentence)
+
+    sentence = sentence.split()
+    if ans[2] == ans[3]:
+        answer = sentence[ans[2]]
+    else:
+        answer = sentence[ans[2]:ans[3]]
+
+    return answer
+
+
 if __name__ == '__main__':
     # resp = get_raw_snippets()
+
+    print('Query:', query)
     eat = qa.get_EAT(query)
     sents, answs = ae.use_qa_store(eat)
     pl, pr = ae.calc_syn_contribution(sents, answs)
-
-    # QUERY MUST BE CAPITALIZED AND SPLIT BEFORE BEING SENT TO GA
     
     snippets = read_snippets()
     sentence_set = dp.get_sentence_set(snippets, stop_words)
-    # unigrams = dp.get_unigrams(sent_set)
-    # print(unigrams)
+    
+    query = dp.normalize_query(query)
+    ans = ae.ga(10, query, sentence_set, stop_words, 1, 1, pl, pr)
+    print(ans)
+
+    answer = process_answer(ans, sentence_set)
+    print('Answer:', answer)
