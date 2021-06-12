@@ -1,7 +1,6 @@
 import requests
 import json
 import re
-import numpy as np
 from nltk.corpus import stopwords
 
 import query_analyzer as qa
@@ -10,7 +9,10 @@ import answer_extraction as ae
 
 
 def get_raw_snippets(query, counter):
-    '''Calls Google's Custom Search API to search for snippets to the query.'''
+    '''
+    Calls Google's Custom Search API to search for snippets to the query
+    and writes them to a file.
+    '''
 
     keys_json = open('config/keys.json', 'r').read()
     keys = json.loads(keys_json)
@@ -26,7 +28,7 @@ def get_raw_snippets(query, counter):
                 'key': api_key}
     )
 
-    test = open('info/test.txt', 'w')
+    test = open('data/raw_snippets.txt', 'w')
     json_response = response.json()
     for i in range(counter):
         snipp = json_response['items'][i]['snippet']
@@ -35,11 +37,9 @@ def get_raw_snippets(query, counter):
             snipp = snipp.replace('\n', '')
             test.write(snipp + '\n')
 
-    return response.json()
-
 
 def read_snippets():
-    test = open('info/test.txt', 'r')
+    test = open('data/raw_snippets.txt', 'r')
     snippets = test.readlines()
 
     # normalize snippets (~)
@@ -60,6 +60,11 @@ def read_snippets():
 
 
 def process_answer(chromosome, sentence_set):
+    '''
+    Cancatenate the words of the asnwer candidate into a single string.
+    Returns the string.
+    '''
+
     sentence = sentence_set[chromosome[1]]
     sentence = sentence.split()
 
@@ -74,6 +79,13 @@ def process_answer(chromosome, sentence_set):
 
 
 def select_elite(pop, query, unigrams, stop_words):
+    '''
+    Reduce the chromosomes of the population to only unique ones,
+    after which only keep those whose answer candidate does not
+    contain stopwords or query terms.
+    Returns the filtered chromosomes.
+    '''
+    
     unique_chromosomes = list()
     for chromosome in pop:
         if chromosome in unique_chromosomes:
@@ -96,11 +108,11 @@ def select_elite(pop, query, unigrams, stop_words):
 
 
 if __name__ == '__main__':
-    query = 'who invented the telephone'
+    query = 'who wrote harry potter'
     counter = 10  # number of snippets to be retrieved (max. 10)
     stop_words = set(stopwords.words('english'))
 
-    # resp = get_raw_snippets(query, counter)
+    resp = get_raw_snippets(query, counter)
 
     print('Query:', query)
     eat = qa.get_EAT(query)
@@ -108,20 +120,24 @@ if __name__ == '__main__':
     snippets = read_snippets()
     sentence_set = dp.get_sentence_set(snippets, stop_words)
     unigrams = dp.get_unigrams(sentence_set, stop_words)
-    sents, answs = ae.use_qa_store(eat, np.array(unigrams)[:, 0])
+    sents, answs = ae.use_qa_store(eat, [unigram[0] for unigram in unigrams])
     max_sent_len = max([len(sent.split()) for sent in sentence_set])
     pl, pr = ae.calc_syn_contribution(sents, answs, max_sent_len)
 
-    query = dp.normalize_query(query)
+    normal_query = dp.normalize_query(query)
 
     candidates = list()
     for _ in range(20):
-        pop = ae.ga(20, query, sentence_set, stop_words, 0.1, 0.7, pl, pr)
+        pop = ae.ga(20, normal_query, sentence_set, stop_words, 0.1, 0.7, pl, pr)
         for candidate in pop:
             candidates.append(candidate)
 
-    elite = select_elite(candidates, query, unigrams, stop_words)
-    best = max(elite)
-    print('Sentence:', sentence_set[best[1]])
-    ans = process_answer(best, sentence_set)
-    print('Answer:', ans)
+    elite = select_elite(candidates, normal_query, unigrams, stop_words)
+    if len(elite) > 0:
+        best = max(elite)
+        print('Sentence:', sentence_set[best[1]])
+        ans = process_answer(best, sentence_set)
+        print('Answer:', ans)
+        ae.add_to_qa_store(eat, query.upper(), sentence_set[best[1]], ans)
+    else:
+        print('Not enough data available...')

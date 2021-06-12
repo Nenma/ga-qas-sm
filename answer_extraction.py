@@ -2,7 +2,6 @@
 Module containing the genetic algorithm used for answer extraction.
 '''
 
-from hashlib import new
 import re
 import pandas as pd
 import random
@@ -29,6 +28,23 @@ def use_qa_store(eat_type, unigrams):
     answers = specific_store['answer'].to_list()
 
     return sentences, answers
+
+
+def add_to_qa_store(eat_type, query, sentence, answer):
+    '''
+    Adds a new entry to the qa_store.csv after checking that there
+    is no duplicate entry.
+    '''
+    
+    store = pd.read_csv('data/qa_store.csv', header=1, encoding='utf8', names=['type', 'question', 'sentence', 'answer'])
+    entry = eat_type + ',' + query + ',' + sentence + ',' + answer + '\n'
+    with open('data/qa_store.csv', 'a') as qa_store:
+        if not ((store['type'] == eat_type) & (store['question'] == query) & (store['sentence'] == sentence) & (store['answer'] == answer)).any():
+            print('[Entry added to qa_store!]')
+            qa_store.write(entry)
+        else:
+            print('[Entry already exists.]')
+    qa_store.close()
 
 
 def calc_syn_contribution(sentences, answers, max_eps):
@@ -136,6 +152,7 @@ def fitness(chromosome, query, sentence_set, Pl, Pr):
     also share common query terms in the context.
     Returns the chromosome with its assigned fitness.
     '''
+
     index = chromosome[1]
     k1 = chromosome[2]
     k2 = chromosome[3]
