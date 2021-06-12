@@ -86,7 +86,7 @@ def get_unigrams(sentence_set, stop_words):
     '''
     Find the words that occur at least 2 times in the set of sentences
     and are not stopwords.
-    Returns a list of tuples of words with their frequency.
+    Returns a list of the words and their frequencies as a list of [word, freq].
     '''
 
     words = list()
@@ -98,8 +98,9 @@ def get_unigrams(sentence_set, stop_words):
     unique_words_freq = list(Counter(words).values())
 
     unigrams = list()
+    unigram_freqs = list()
     for i in range(len(unique_words)):
         if unique_words[i] != '' and unique_words[i].lower() not in stop_words and unique_words_freq[i] >= 2:
-            unigrams.append((unique_words[i], unique_words_freq[i]))
+            unigrams.append([unique_words[i], unique_words_freq[i]])
 
     return unigrams
