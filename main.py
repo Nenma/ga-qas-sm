@@ -45,8 +45,9 @@ def read_snippets():
     # normalize snippets (~)
     snippets = [snipp.strip().upper().encode('ascii', 'ignore').decode() for snipp in snippets]
 
-    # get rid of parantheses
-    snippets = [re.sub('[\(\)\[\]]', '', snipp) for snipp in snippets]
+    # get rid of parantheses, also get rid of commas (with the intention of avoiding appositions)
+    # e.g.: the author, born in 1985, wrote the book
+    snippets = [re.sub('[\(\)\[\],]', '', snipp) for snipp in snippets]
 
     # transform intervals of time NUMBER1-NUMBER2 into NUMBER1 TO NUMBER2
     for i, snipp in enumerate(snippets):

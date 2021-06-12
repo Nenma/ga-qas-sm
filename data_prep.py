@@ -25,10 +25,10 @@ def get_sentence_set(snippets, stop_words):
     Returns the list of sentences.
     '''
 
-    # split sentences according to standard punctuation
+    # split sentences according to standard punctuation (minus commas)
     sentence_set = list()
     for snipp in snippets:
-        sentences = re.split('[,.;:\-?|]', snipp)
+        sentences = re.split('[.;:\-?|]', snipp)
         for sentence in sentences:
             if sentence != '':
                 if sentence[0] == ' ':
