@@ -1,3 +1,5 @@
+'''Main module.'''
+
 import requests
 import json
 import re
@@ -6,6 +8,10 @@ from nltk.corpus import stopwords
 import query_analyzer as qa
 import data_prep as dp
 import answer_extraction as ae
+import twitter_crawler as tc
+
+
+G_API_URL = 'https://customsearch.googleapis.com/customsearch/v1'
 
 
 def get_raw_snippets(query, counter):
@@ -16,17 +22,22 @@ def get_raw_snippets(query, counter):
 
     keys_json = open('config/keys.json', 'r').read()
     keys = json.loads(keys_json)
-    cx_key = keys['cx_key']
-    api_key = keys['api_key']
+
+    g_cx_key = keys['g_cx_key']
+    g_api_key = keys['g_api_key']
 
     response = requests.get(
-        'https://customsearch.googleapis.com/customsearch/v1',
-        params={'cx': cx_key,
+        G_API_URL,
+        params={'cx': g_cx_key,
                 'lr': 'lang_en',
                 'num': counter,
                 'q': query,
-                'key': api_key}
+                'key': g_api_key
+        }
     )
+
+    if response.status_code != 200:
+        raise Exception(response.status_code, response.text)
 
     test = open('data/raw_snippets.txt', 'w')
     json_response = response.json()
@@ -36,11 +47,13 @@ def get_raw_snippets(query, counter):
             snipp = snipp.strip('\n')
             snipp = snipp.replace('\n', '')
             test.write(snipp + '\n')
+    test.close()
 
 
 def read_snippets():
     test = open('data/raw_snippets.txt', 'r')
     snippets = test.readlines()
+    test.close()
 
     # normalize snippets (~)
     snippets = [snipp.strip().upper().encode('ascii', 'ignore').decode() for snipp in snippets]
