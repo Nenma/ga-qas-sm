@@ -3,48 +3,8 @@ Module containing the genetic algorithm used for answer extraction.
 '''
 
 import re
-import pandas as pd
 import random
 from collections import Counter
-
-
-def use_qa_store(eat_type, unigrams):
-    '''
-    Acces the qa_store.csv to get the (sentences, aswers) pairs for a certain EAT
-    whose sentences contain the given unigrams.
-    Returns the (sentences, answers) pairs.
-    '''
-
-    store = pd.read_csv('data/qa_store.csv', header=1, encoding='utf8', names=['type', 'question', 'sentence', 'answer'])
-    
-    specific_store = store[store['type'] == eat_type]
-    
-    unigram_words = ''
-    for unigram in unigrams:
-        unigram_words += unigram + '|'
-    specific_store = specific_store[specific_store['sentence'].str.contains(unigram_words[:-1])]
-
-    sentences = specific_store['sentence'].to_list()
-    answers = specific_store['answer'].to_list()
-
-    return sentences, answers
-
-
-def add_to_qa_store(eat_type, query, sentence, answer):
-    '''
-    Adds a new entry to the qa_store.csv after checking that there
-    is no duplicate entry.
-    '''
-    
-    store = pd.read_csv('data/qa_store.csv', header=1, encoding='utf8', names=['type', 'question', 'sentence', 'answer'])
-    entry = eat_type + ',' + query + ',' + sentence + ',' + answer + '\n'
-    with open('data/qa_store.csv', 'a') as qa_store:
-        if not ((store['type'] == eat_type) & (store['question'] == query) & (store['sentence'] == sentence) & (store['answer'] == answer)).any():
-            print('[Entry added to qa_store!]')
-            qa_store.write(entry)
-        else:
-            print('[Entry already exists.]')
-    qa_store.close()
 
 
 def calc_syn_contribution(sentences, answers, max_eps):
@@ -66,11 +26,6 @@ def calc_syn_contribution(sentences, answers, max_eps):
 
     unique_words = list(Counter(words).keys())
     unique_words_freq = list(Counter(words).values())
-
-    # find the length of the longest sentence, thus obtaining the maximum number of words between 2 words
-    # split_sentences = [sentence.split() for sentence in sentences]
-    # max_sent_len = len(max(split_sentences, key=lambda x: len(x)))
-    # max_eps = max_sent_len - 2
 
     # initialize frequency dictionaries for left and right
     Pl = dict()

@@ -3,7 +3,6 @@ Module containing functions used for query normalization and snippet preprocessi
 '''
 
 import re
-import math
 from collections import Counter
 
 
@@ -28,7 +27,7 @@ def get_sentence_set(snippets, stop_words):
     # split sentences according to standard punctuation (minus commas)
     sentence_set = list()
     for snipp in snippets:
-        sentences = re.split('[.;:\-?|]', snipp)
+        sentences = re.split('[.;\-?|]', snipp)
         for sentence in sentences:
             if sentence != '':
                 if sentence[0] == ' ':
@@ -47,39 +46,6 @@ def get_sentence_set(snippets, stop_words):
             final_sentence_set.append(sentence)
     
     return final_sentence_set
-
-
-def get_baseline(snippets, stop_words):
-    '''
-    Calculated the Term Frequency - Inverse Document Frequency for each unique
-    snippet of the retrieved snippets. Each snippet is interpreted as one
-    document, and all the snippets are seen as the collection of documents. 
-    '''
-
-    words = list()
-    for snipp in snippets:
-        for sentence in re.split('[,.;:\-?|]', snipp):
-            for word in sentence.split(' '):
-                words.append(word)
-    
-    unique_words = list(Counter(words).keys())
-    unique_words_freq = list(Counter(words).values())
-
-    word_freq = list()
-    max_freq = max(unique_words_freq)
-    collection_size = len(snippets)
-
-    for i in range(len(unique_words)):
-        if unique_words[i] != '' and unique_words[i].lower() not in stop_words and not unique_words[i].isnumeric():
-            occurences = 0
-            for snipp in snippets:
-                if unique_words[i] in snipp:
-                    occurences += 1
-
-            tfidf = (unique_words_freq[i] / max_freq) * math.log(collection_size / occurences)
-            word_freq.append((unique_words[i], tfidf))
-
-    return word_freq
 
 
 def get_unigrams(sentence_set, stop_words):

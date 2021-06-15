@@ -1,81 +1,37 @@
 '''Main module.'''
 
-import requests
-import json
 import re
 from nltk.corpus import stopwords
+
+import crawler.google_crawler as gc
+import crawler.twitter_crawler as tc
+
+import util.qa_store_util as qasu
+import util.tw_store_util as twsu
 
 import query_analyzer as qa
 import data_prep as dp
 import answer_extraction as ae
-import twitter_crawler as tc
 
 
-G_API_URL = 'https://customsearch.googleapis.com/customsearch/v1'
+STOP_WORDS = set(stopwords.words('english'))
+GENERATIONS = 20
+ITERATIONS = 20
+MUTATION_PROB = 0.1
+CROSSOVER_PROB = 0.7
 
 
-def get_raw_snippets(query, counter):
-    '''
-    Calls Google's Custom Search API to search for snippets to the query
-    and writes them to a file.
-    '''
-
-    keys_json = open('config/keys.json', 'r').read()
-    keys = json.loads(keys_json)
-
-    g_cx_key = keys['g_cx_key']
-    g_api_key = keys['g_api_key']
-
-    response = requests.get(
-        G_API_URL,
-        params={'cx': g_cx_key,
-                'lr': 'lang_en',
-                'num': counter,
-                'q': query,
-                'key': g_api_key
-        }
-    )
-
-    if response.status_code != 200:
-        raise Exception(response.status_code, response.text)
-
-    test = open('data/raw_snippets.txt', 'w')
-    json_response = response.json()
-    for i in range(counter):
-        snipp = json_response['items'][i]['snippet']
-        if snipp:
-            snipp = snipp.strip('\n')
-            snipp = snipp.replace('\n', '')
-            test.write(snipp + '\n')
+def read_data(filename):
+    test = open(filename, 'r')
+    data = test.readlines()
     test.close()
 
-
-def read_snippets():
-    test = open('data/raw_snippets.txt', 'r')
-    snippets = test.readlines()
-    test.close()
-
-    # normalize snippets (~)
-    snippets = [snipp.strip().upper().encode('ascii', 'ignore').decode() for snipp in snippets]
-
-    # get rid of parantheses, also get rid of commas (with the intention of avoiding appositions)
-    # e.g.: the author, born in 1985, wrote the book
-    snippets = [re.sub('[\(\)\[\],]', '', snipp) for snipp in snippets]
-
-    # transform intervals of time NUMBER1-NUMBER2 into NUMBER1 TO NUMBER2
-    for i, snipp in enumerate(snippets):
-        interval_pairs = re.findall(r'([0-9]+)(-[0-9]+)+', snipp)
-        for pair in interval_pairs:
-            interval = pair[0] + pair[1]
-            snipp = re.sub(interval, pair[0] + ' TO ' + pair[1][1:], snipp)
-        snippets[i] = snipp
-
-    return snippets
+    return data
 
 
 def process_answer(chromosome, sentence_set):
     '''
-    Cancatenate the words of the asnwer candidate into a single string.
+    Cancatenate the words of the answer candidate into a single string.
     Returns the string.
     '''
 
@@ -92,7 +48,7 @@ def process_answer(chromosome, sentence_set):
     return answer
 
 
-def select_elite(pop, query, unigrams, stop_words):
+def select_elite(pop, query, sentence_set, unigrams, stop_words):
     '''
     Reduce the chromosomes of the population to only unique ones,
     after which only keep those whose answer candidate does not
@@ -122,36 +78,43 @@ def select_elite(pop, query, unigrams, stop_words):
 
 
 if __name__ == '__main__':
-    query = 'who wrote harry potter'
-    counter = 10  # number of snippets to be retrieved (max. 10)
-    stop_words = set(stopwords.words('english'))
+    query = 'who invented the radio'
 
-    resp = get_raw_snippets(query, counter)
+    gc.get_raw_snippets(query, 10)
+    # tc.get_raw_posts(query, 20)
 
     print('Query:', query)
     eat = qa.get_EAT(query)
 
-    snippets = read_snippets()
-    sentence_set = dp.get_sentence_set(snippets, stop_words)
-    unigrams = dp.get_unigrams(sentence_set, stop_words)
-    sents, answs = ae.use_qa_store(eat, [unigram[0] for unigram in unigrams])
+    data = read_data('data/raw_snippets.txt')
+    # data = read_data('data/raw_posts.txt')
+
+    sentence_set = dp.get_sentence_set(data, STOP_WORDS)
+    unigrams = dp.get_unigrams(sentence_set, STOP_WORDS)
+    unigram_words = [unigram[0] for unigram in unigrams]
+
+    sents, answs = qasu.use_qa_store(eat, unigram_words)
+    # sents, answs = twsu.use_tw_store(unigram_words)
+
     max_sent_len = max([len(sent.split()) for sent in sentence_set])
     pl, pr = ae.calc_syn_contribution(sents, answs, max_sent_len)
 
     normal_query = dp.normalize_query(query)
 
     candidates = list()
-    for _ in range(20):
-        pop = ae.ga(20, normal_query, sentence_set, stop_words, 0.1, 0.7, pl, pr)
+    for _ in range(ITERATIONS):
+        pop = ae.ga(GENERATIONS, normal_query, sentence_set, STOP_WORDS, MUTATION_PROB, CROSSOVER_PROB, pl, pr)
         for candidate in pop:
             candidates.append(candidate)
 
-    elite = select_elite(candidates, normal_query, unigrams, stop_words)
+    elite = select_elite(candidates, normal_query, sentence_set, unigrams, STOP_WORDS)
     if len(elite) > 0:
         best = max(elite)
         print('Sentence:', sentence_set[best[1]])
         ans = process_answer(best, sentence_set)
         print('Answer:', ans)
-        ae.add_to_qa_store(eat, query.upper(), sentence_set[best[1]], ans)
+
+        qasu.add_to_qa_store(eat, query.upper(), sentence_set[best[1]], ans)
+        # twsu.add_to_tw_store(sentence_set[best[1]], ans)
     else:
         print('Not enough data available...')
