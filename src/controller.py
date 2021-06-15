@@ -1,4 +1,4 @@
-'''Main module.'''
+'''Module containing functions for the QA cycle - the whole proces of answering a question.'''
 
 import re
 from nltk.corpus import stopwords
@@ -23,17 +23,16 @@ ITERATIONS = 20
 MUTATION_PROB = 0.1
 CROSSOVER_PROB = 0.7
 
-nlp = spacy.load('en_core_web_sm')
-pf = ProfanityFilter(nlps={'en': nlp})
-nlp.add_pipe(pf.spacy_component, last=True)
+NLP = spacy.load('en_core_web_sm')
+NLP.add_pipe(ProfanityFilter(nlps={'en': NLP}).spacy_component, last=True)
 
 
-def read_data():
-    test = open('data/raw_data.txt', 'r')
-    data = test.readlines()
-    test.close()
+# def read_data():
+#     test = open('data/raw_data.txt', 'r')
+#     data = test.readlines()
+#     test.close()
 
-    return data
+#     return data
 
 
 def process_answer(chromosome, sentence_set):
@@ -79,23 +78,20 @@ def select_elite(pop, query, sentence_set, unigrams, stop_words):
         # not any([stop_word.upper() in ans.split() for stop_word in stop_words]) and \
         if any([unigram[0] in ans.split() and unigram[1] > min_quality for unigram in unigrams]) and \
             any([query_word in ans.split() for query_word in query]) and \
-            not nlp(sent)._.is_profane and \
+            not NLP(sent)._.is_profane and \
             ans not in elite:
                 elite.append(chromosome)
 
     return elite
 
 
-if __name__ == '__main__':
-    query = 'Portugal'
-
+def get_selected_tweet(query):
     # gc.get_raw_snippets(query, 10)
-    tc.get_raw_posts(query, 20)
 
     print('Query:', query)
     # eat = qa.get_EAT(query)
 
-    data = read_data()
+    data = tc.get_raw_posts(query, 20)
 
     sentence_set = dp.get_sentence_set(data, STOP_WORDS)
     unigrams = dp.get_unigrams(sentence_set, STOP_WORDS)
@@ -125,5 +121,7 @@ if __name__ == '__main__':
 
         # qasu.add_to_qa_store(eat, query.upper(), sentence_set[best[1]], ans)
         twsu.add_to_tw_store(sentence, query.upper())
+
+        return sentence
     else:
-        print('Not enough data available...')
+        return 'BLANK'

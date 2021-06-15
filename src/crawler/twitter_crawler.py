@@ -1,11 +1,14 @@
 '''Module containing functions that make calls to the Twitter API.'''
 
-import requests
+import sys
+import os
 import json
+import requests
 import re
 
 
 TW_API_URL = 'https://api.twitter.com/2/tweets/search/recent'
+TW_API_URL_TRENDS = 'https://api.twitter.com/1.1/trends/place.json'
 
 
 def get_headers():
@@ -23,9 +26,9 @@ def get_headers():
 def get_trends():
     headers = get_headers()
     response = requests.get(
-        'https://api.twitter.com/1.1/trends/place.json',
+        TW_API_URL_TRENDS,
         headers=headers,
-        params={'id': 1, 'max_results': 5}
+        params={'id': 1}
     )
 
     if response.status_code != 200:
@@ -87,15 +90,26 @@ def get_raw_posts(query, count):
 
     og_posts_json = get_og_posts(query, count)
 
-    posts = open('data/raw_data.txt', 'w', encoding='utf8')
+    posts = list()
+    # file = open('data/raw_data.txt', 'w', encoding='utf8')
     for i in range(count):
         post = og_posts_json['data'][i]['text']
         post = normalize_post(post)
-        posts.write(post + '\n')
-    posts.close()
+        posts.append(post)
+        # file.write(post + '\n')
+    # file.close()
+
+    return posts
 
 
-# FOR TESTING
+def get_base_prefix_compat():
+    """Get base/real prefix, or sys.prefix if there is none."""
+    return getattr(sys, "base_prefix", None) or getattr(sys, "real_prefix", None) or sys.prefix
+
+def in_virtualenv():
+    return get_base_prefix_compat() != sys.prefix
+
+
 if __name__ == '__main__':
-    trends = get_trends()
-    print(trends)
+    test = get_trends()
+    print(test)
