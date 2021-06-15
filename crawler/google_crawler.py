@@ -49,7 +49,7 @@ def get_raw_snippets(query, count):
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
 
-    test = open('data/raw_snippets.txt', 'w')
+    snipps = open('data/raw_snippets.txt', 'w')
     json_response = response.json()
     for i in range(count):
         snipp = json_response['items'][i]['snippet']
@@ -57,5 +57,5 @@ def get_raw_snippets(query, count):
             snipp = snipp.strip()
             snipp = snipp.replace('\n', '')
             snipp = normalize_snippet(snipp)
-            test.write(snipp + '\n')
-    test.close()
+            snipps.write(snipp + '\n')
+    snipps.close()

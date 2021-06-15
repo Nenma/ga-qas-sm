@@ -255,6 +255,7 @@ def pick_one(collective_fitness):
         current += collective_fitness[i]
         if current > pick:
             return i
+    return 0
 
 
 def select_pop(pop, pop_size):
