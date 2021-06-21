@@ -101,7 +101,7 @@ def get_selected_tweet(query):
     sents, answs = twsu.use_tw_store(unigram_words)
 
     max_sent_len = max([len(sent.split()) for sent in sentence_set])
-    pl, pr = ae.calc_syn_contribution(sents, answs, max_sent_len)
+    pl, pr = qa.calc_syn_contribution(sents, answs, max_sent_len)
 
     normal_query = dp.normalize_query(query)
 

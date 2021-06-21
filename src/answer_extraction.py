@@ -2,63 +2,10 @@
 Module containing the genetic algorithm used for answer extraction.
 '''
 
-import re
 import random
-from collections import Counter
 
 
-def calc_syn_contribution(sentences, answers, max_eps):
-    '''
-    Calculates syntactic contribution, or the frequency with which words are
-    positioned to the left of the answer with 'epsilon' words between them,
-    respectively to the right of the answer in the same fashion.
-    Returns 2 dictionaries: one corresponding to the 'left frequencies' and
-    one corresponding to the 'right frequencies'.
-    '''
-
-    for i in range(len(sentences)):
-        sentences[i] = sentences[i].replace(answers[i], 'w')
-    
-    words = list()
-    for sentence in sentences:
-        for word in sentence.split():
-            words.append(word)
-
-    unique_words = list(Counter(words).keys())
-    unique_words_freq = list(Counter(words).values())
-
-    # initialize frequency dictionaries for left and right
-    Pl = dict()
-    Pr = dict()
-    for word in unique_words:
-        Pl[word] = list()
-        Pr[word] = list()
-
-    # use regex to calculate the frequency values
-    # rf'{FIRST_WORD}\W+(\w+\W+){{{n}}}{SECOND_WORD}' - regex for matching two words within exactly n words of each other
-    for i, word in enumerate(unique_words):
-        if word != 'w':
-            for eps in range(max_eps):
-                left_counter = 0
-                right_counter = 0
-                for sentence in sentences:
-                    left_counter += len(re.findall(rf'{word}\W+(\w+\W+){{{eps}}}w', sentence))
-                    right_counter += len(re.findall(rf'w\W+(\w+\W+){{{eps}}}{word}', sentence))
-                Pl[word].append(left_counter / unique_words_freq[i])
-                Pr[word].append(right_counter / unique_words_freq[i])
-
-    # remove inconsequential entries - that have 0 frequency across the board
-    for word, freqs in list(Pl.items()):
-        if not any(freqs):
-            del Pl[word]
-    for word, freqs in list(Pr.items()):
-        if not any(freqs):
-            del Pr[word]
-    
-    return Pl, Pr
-
-
-def create_initial_pop(query, sentence_set, stop_words):
+def create_initial_pop(sentence_set, stop_words):
     '''
     Initializes the population with a number of chromosomes equal to the
     size of the sentence set. A chromosome is a list [K, s, k1, k2] where
@@ -69,13 +16,13 @@ def create_initial_pop(query, sentence_set, stop_words):
     pop = list()
     for i, sentence in enumerate(sentence_set):
         sentence = sentence.split()
-        # generate new k1 and k2 if the n-gram contains stopwords or words from the query
+        # generate new k1 and k2 if the n-gram contains stopwords
         bad_candidate = True
         while bad_candidate:
             bad_candidate = False
             k1 = random.randint(0, len(sentence) - 1)
             k2 = random.randint(k1, len(sentence) - 1)
-            if any([word in sentence[k1:k2] for word in stop_words]) or any([word in sentence[k1:k2] for word in query]):
+            if any([word in sentence[k1:k2] for word in stop_words]):
                 bad_candidate = True
         
         pop.append([0, i, k1, k2])
@@ -286,7 +233,7 @@ def select_pop(pop, pop_size):
 
 
 def ga(generations, query, sentence_set, stop_words, mutation_prob, crossover_prob, Pl, Pr):
-    pop = create_initial_pop(query, sentence_set, stop_words)
+    pop = create_initial_pop(sentence_set, stop_words)
     pop_size = len(pop)
 
     for i in range(generations):
